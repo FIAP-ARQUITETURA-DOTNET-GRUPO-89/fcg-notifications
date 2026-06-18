@@ -49,6 +49,12 @@ jobs:
         run: |
           cat coverage-report/Summary.md >> $GITHUB_STEP_SUMMARY
 
+      - name: 💬 Comentar cobertura no Pull Request
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: coverage-report/Summary.md
+
       - name: 📦 Upload relatório de cobertura
         uses: actions/upload-artifact@v4
         with:
