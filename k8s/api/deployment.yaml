@@ -41,7 +41,7 @@ spec:
           image: camilamachado22/fcg-notifications-api:1.0.0-preview.2
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 7080
+            - containerPort: 7020
           envFrom:
             - configMapRef:
                 name: fcg-notifications-api-config
@@ -62,7 +62,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 7080
+              port: 7020
             initialDelaySeconds: 20
             periodSeconds: 10
             timeoutSeconds: 3
@@ -71,7 +71,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 7080
+              port: 7020
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
