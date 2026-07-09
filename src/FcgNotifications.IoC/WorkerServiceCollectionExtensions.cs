@@ -1,8 +1,8 @@
-using FcgNotifications.Application;
+﻿using FcgNotifications.Application;
 using FcgNotifications.Domain;
-using FcgNotifications.Domain.Repositories.Orders;
+using FcgNotifications.Domain.Repositories;
 using FcgNotifications.Infrastructure.Database;
-using FcgNotifications.Infrastructure.Repositories.Orders;
+using FcgNotifications.Infrastructure.Repositories;
 using FcgNotifications.SharedKernel.Behaviors;
 using FcgNotifications.SharedKernel.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -26,13 +26,13 @@ public static class WorkerServiceCollectionExtensions
                 typeof(ValidationBehavior<,>).Assembly)
         );
 
-        //Banco
+        // Banco
         services.AddDbContext<FcgNotificationsDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Default"),
                 npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
 
         // Repositories
-        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>(); // Registrado
 
         // Services
     }

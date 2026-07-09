@@ -16,4 +16,12 @@
     <ProjectReference Include="..\FcgNotifications.SharedKernel\FcgNotifications.SharedKernel.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Commands\" />
+    <Folder Include="Mappers\" />
+    <Folder Include="Queries\" />
+    <Folder Include="Responses\" />
+    <Folder Include="Validators\" />
+  </ItemGroup>
+
 </Project>

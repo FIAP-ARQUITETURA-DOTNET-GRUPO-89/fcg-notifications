@@ -1,11 +1,11 @@
-using FcgNotifications.Domain.Entities;
+﻿using FcgNotifications.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace FcgNotifications.Infrastructure.Database;
 
 public class FcgNotificationsDbContext(DbContextOptions<FcgNotificationsDbContext> options) : DbContext(options)
 {
-    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
         => modelBuilder.ApplyConfigurationsFromAssembly(typeof(FcgNotificationsDbContext).Assembly);

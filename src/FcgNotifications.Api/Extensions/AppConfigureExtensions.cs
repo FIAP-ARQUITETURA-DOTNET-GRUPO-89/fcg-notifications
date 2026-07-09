@@ -1,5 +1,4 @@
-using FcgNotifications.Api.Endpoints;
-using FcgNotifications.Api.Middlewares;
+﻿using FcgNotifications.Api.Middlewares;
 using FcgNotifications.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,8 +31,6 @@ public static class AppConfigureExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
-
-        app.MapOrdersEndpoints();
 
         app.MapHealthChecks("/health");
         app.MapHealthChecks("/ready");
