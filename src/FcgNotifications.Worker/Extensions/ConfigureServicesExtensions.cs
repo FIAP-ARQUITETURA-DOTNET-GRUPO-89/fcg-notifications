@@ -13,6 +13,7 @@ public static class ConfigureServicesExtensions
         services.AddMassTransitRabbitMq(configuration, x =>
         {
             x.AddConsumer<PaymentProcessedConsumer>();
+            x.AddConsumer<UserCreatedConsumer>();
         });
 
         return services;

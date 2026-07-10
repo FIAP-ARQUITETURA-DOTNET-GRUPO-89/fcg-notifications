@@ -5,7 +5,6 @@ using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-
 builder.Services.AddSerilog((services, configuration) =>
 {
     configuration
@@ -15,17 +14,8 @@ builder.Services.AddSerilog((services, configuration) =>
 });
 
 builder.AddServiceDefaults();
+
 builder.Services.ConfigureServices(builder.Configuration);
 
-
-builder.Services.AddMassTransitRabbitMq(builder.Configuration, x =>
-{
-    x.AddConsumer<UserCreatedConsumer>();
-    x.AddConsumer<PaymentProcessedConsumer>();
-
-});
-
 var host = builder.Build();
-
-
 host.Run();

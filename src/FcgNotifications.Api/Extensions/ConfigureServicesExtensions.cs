@@ -1,4 +1,4 @@
-using FcgNotifications.Infrastructure.Database;
+﻿using FcgNotifications.Infrastructure.Database;
 using FcgNotifications.IoC;
 using Microsoft.OpenApi;
 
@@ -20,7 +20,7 @@ public static class ConfigureServicesExtensions
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
                 BearerFormat = "JWT",
-                Description = "Cole somente o token JWT. O prefixo 'Bearer' será adicionado automaticamente."
+                Description = "Cole o token JWT."
             });
 
             options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
@@ -30,7 +30,6 @@ public static class ConfigureServicesExtensions
         });
 
         services.ConfigureAppDependencies(configuration);
-
         services.AddHealthChecks().AddDbContextCheck<FcgNotificationsDbContext>();
     }
 }
