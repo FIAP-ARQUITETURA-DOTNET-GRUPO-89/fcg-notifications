@@ -3,11 +3,15 @@
 var builder = DistributedApplication.CreateBuilder(args);
 var isTesting = builder.Environment.IsEnvironment("Testing");
 
+var postgresPassword = builder.AddParameter("postgresPassword", "postgres");
+
 var postgres = isTesting
     ? builder.AddPostgres("Postgres")
+        .WithPassword(postgresPassword)
         .WithLifetime(ContainerLifetime.Session)
         .AddDatabase("Default", "fcgnotifications-db")
     : builder.AddPostgres("Postgres", port: 5432)
+        .WithPassword(postgresPassword)
         .WithLifetime(ContainerLifetime.Persistent)
         .WithPgAdmin(c => c.WithLifetime(ContainerLifetime.Persistent))
         .AddDatabase("Default", "fcgnotifications-db");

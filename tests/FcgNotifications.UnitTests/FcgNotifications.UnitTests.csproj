@@ -25,7 +25,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FcgNotifications.Application\FcgNotifications.Application.csproj" />
+    <ProjectReference Include="..\..\src\FcgNotifications.Domain\FcgNotifications.Domain.csproj" />
     <ProjectReference Include="..\..\src\FcgNotifications.Infrastructure\FcgNotifications.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\FcgNotifications.Worker\FcgNotifications.Worker.csproj" />
   </ItemGroup>
 
 </Project>

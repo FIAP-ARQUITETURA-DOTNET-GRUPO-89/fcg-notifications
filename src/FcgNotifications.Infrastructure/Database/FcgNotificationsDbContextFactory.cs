@@ -17,6 +17,11 @@ public class FcgNotificationsDbContextFactory : IDesignTimeDbContextFactory<FcgN
         var optionsBuilder = new DbContextOptionsBuilder<FcgNotificationsDbContext>();
         var connectionString = configuration.GetConnectionString("Default");
 
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("A Connection String 'Default' não foi encontrada. Verifique o appsettings.json do Worker.");
+        }
+
         optionsBuilder.UseNpgsql(connectionString);
 
         return new FcgNotificationsDbContext(optionsBuilder.Options);

@@ -15,12 +15,4 @@ public class FcgNotificationsDbContext(DbContextOptions<FcgNotificationsDbContex
             .Properties<string>()
             .AreUnicode(false)
             .HaveMaxLength(255);
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseNpgsql("Host=localhost;Database=FcgNotifications;Username=postgres;Password=postgres");
-        }
-    }
 }
