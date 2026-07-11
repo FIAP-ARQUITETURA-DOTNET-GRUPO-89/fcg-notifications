@@ -1,7 +1,6 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
-
 var isTesting = builder.Environment.IsEnvironment("Testing");
 
 var postgres = isTesting
@@ -21,18 +20,11 @@ var rabbitmq = isTesting
         .WithManagementPlugin()
         .WithLifetime(ContainerLifetime.Persistent);
 
-builder.AddProject<Projects.FcgNotifications_Api>("fcgnotifications-api")
-        .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
-        .WithReference(postgres)
-        .WithReference(rabbitmq)
-        .WaitFor(postgres)
-        .WaitFor(rabbitmq);
-
 builder.AddProject<Projects.FcgNotifications_Worker>("fcgnotifications-worker")
-        .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
-        .WithReference(postgres)
-        .WithReference(rabbitmq)
-        .WaitFor(postgres)
-        .WaitFor(rabbitmq);
+       .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+       .WithReference(postgres)
+       .WithReference(rabbitmq)
+       .WaitFor(postgres)
+       .WaitFor(rabbitmq);
 
 builder.Build().Run();

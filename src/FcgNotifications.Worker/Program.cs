@@ -1,6 +1,4 @@
-﻿using FcgNotifications.Infrastructure.Messaging;
-using FcgNotifications.Worker.Consumers;
-using FcgNotifications.Worker.Extensions;
+﻿using FcgNotifications.Worker.Extensions;
 using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -18,4 +16,5 @@ builder.AddServiceDefaults();
 builder.Services.ConfigureServices(builder.Configuration);
 
 var host = builder.Build();
+
 host.Run();

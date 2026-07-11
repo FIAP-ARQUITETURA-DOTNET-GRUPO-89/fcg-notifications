@@ -7,7 +7,7 @@ namespace FcgNotifications.Worker.Consumers;
 public sealed partial class PaymentProcessedConsumer(
     IMediator mediator,
     ILogger<PaymentProcessedConsumer> logger)
-: IConsumer<PaymentProcessedEvent> // Deve consumir PaymentProcessedEvent
+: IConsumer<PaymentProcessedEvent>
 {
     public async Task Consume(ConsumeContext<PaymentProcessedEvent> context)
     {

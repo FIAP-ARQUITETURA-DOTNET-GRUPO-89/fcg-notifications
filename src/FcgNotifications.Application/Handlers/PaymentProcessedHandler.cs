@@ -15,7 +15,6 @@ public sealed class PaymentProcessedHandler(
 {
     public async Task Handle(PaymentProcessedEvent notification, CancellationToken cancellationToken)
     {
-        // Só dispara notificação se o pagamento foi Aprovado
         if (notification.Status != "Approved") return;
 
         var email = Email.Create(notification.CustomerEmail);

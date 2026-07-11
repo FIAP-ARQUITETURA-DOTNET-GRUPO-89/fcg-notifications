@@ -5,7 +5,6 @@ namespace FcgNotifications.Domain.Entities;
 
 public class Notification : BaseEntity
 {
-    // Construtor protegido para uso do Entity Framework
     protected Notification() { }
 
     public Notification(Guid userId, Email userEmail, string message, NotificationType type)
