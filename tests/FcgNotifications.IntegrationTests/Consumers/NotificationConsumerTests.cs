@@ -67,5 +67,4 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture)
 
         await busControl.StopAsync();
     }
-    }
 }
