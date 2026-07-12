@@ -1,35 +1,24 @@
-﻿//using FcgNotifications.Domain.Entities;
-//using FcgNotifications.Domain.ValueObjects;
-//using FcgNotifications.Infrastructure.Database;
+﻿using FcgNotifications.Domain.Entities;
+using FcgNotifications.Domain.Enums;
+using FcgUsers.Domain.ValueObjects;
+using FcgNotifications.Infrastructure.Database;
 
-//namespace FcgNotifications.IntegrationTests.TestHelpers;
+namespace FcgNotifications.IntegrationTests.TestHelpers;
 
-///// <summary>
-///// Responsável por popular o banco de dados com dados iniciais necessários para os testes de integração.
-///// </summary>
-//public static class TestDataSeeder
-//{
-//    public static async Task SeedAsync(FcgNotificationsDbContext context)
-//    {
-//        if (context.Orders.Any())
-//        {
-//            return;
-//        }
+public static class TestDataSeeder
+{
+    public static async Task SeedAsync(FcgNotificationsDbContext context)
+    {
+        if (context.Notifications.Any()) return;
 
-//        var order = new Order(
-//            customer: "Cliente Teste",
-//            totalAmount: 150.00m,
-//            deliveryAddress: new Address(
-//                street: "Rua Teste",
-//                city: "Lages",
-//                state: "SC",
-//                cep: "88500000"
-//            )
-//        );
+        var notification = new Notification(
+            Guid.NewGuid(),
+            Email.Create("seed@sistema.com"),
+            "Notificação de inicialização",
+            NotificationType.Welcome
+        );
 
-//        context.Orders.Add(order);
-
-//        await context.SaveChangesAsync();
-//    }
-//}
-
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
+    }
+}

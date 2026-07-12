@@ -25,6 +25,7 @@ var rabbitmq = isTesting
         .WithLifetime(ContainerLifetime.Persistent);
 
 builder.AddProject<Projects.FcgNotifications_Worker>("fcgnotifications-worker")
+       .WithHttpEndpoint(port: 5000, name: "http")
        .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
        .WithReference(postgres)
        .WithReference(rabbitmq)

@@ -1,6 +1,5 @@
 ﻿using FcgNotifications.Application.Handlers;
 using FcgNotifications.Domain.Entities;
-using FcgNotifications.Domain.Enums;
 using FcgNotifications.Domain.Events;
 using FcgNotifications.Domain.Repositories;
 using Microsoft.Extensions.Logging;

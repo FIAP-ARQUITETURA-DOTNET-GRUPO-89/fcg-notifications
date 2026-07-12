@@ -1,20 +1,38 @@
-﻿using FcgNotifications.Worker.Extensions;
+﻿using FcgNotifications.IoC;
+using FcgNotifications.Worker.Consumers;
+using MassTransit;
+using Microsoft.AspNetCore.Builder;
 using Serilog;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 builder.Services.AddSerilog((services, configuration) =>
 {
     configuration
         .ReadFrom.Configuration(builder.Configuration)
         .ReadFrom.Services(services)
-        .Enrich.FromLogContext();
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
 });
 
-builder.AddServiceDefaults();
+builder.Services.ConfigureWorkerDependencies(builder.Configuration);
 
-builder.Services.ConfigureServices(builder.Configuration);
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<PaymentProcessedConsumer>();
+    x.AddConsumer<UserCreatedConsumer>();
 
-var host = builder.Build();
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("rabbitmq"));
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
-host.Run();
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+app.Run();
