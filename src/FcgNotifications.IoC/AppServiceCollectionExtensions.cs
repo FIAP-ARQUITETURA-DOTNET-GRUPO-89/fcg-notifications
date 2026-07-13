@@ -1,11 +1,11 @@
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using FcgNotifications.Application;
 using FcgNotifications.Domain;
-using FcgNotifications.Domain.Repositories.Orders;
+using FcgNotifications.Domain.Repositories;
 using FcgNotifications.Infrastructure.Database;
 using FcgNotifications.Infrastructure.Messaging;
-using FcgNotifications.Infrastructure.Repositories.Orders;
+using FcgNotifications.Infrastructure.Repositories;
 using FcgNotifications.SharedKernel.Behaviors;
 using FcgNotifications.SharedKernel.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -32,18 +32,17 @@ public static class AppServiceCollectionExtensions
         services.AddValidatorsFromAssemblyContaining<IApplicationAssembly>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-        //Banco
+        // Banco
         services.AddDbContext<FcgNotificationsDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Default"),
                 npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
 
-        //MassTransit
+        // MassTransit
         services.AddMassTransitRabbitMqPublisher(configuration);
 
         // Repositories
-        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>(); // Registrado
 
         // Services
-
     }
 }

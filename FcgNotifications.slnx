@@ -1,6 +1,5 @@
 <Solution>
   <Folder Name="/1 - Presentation/">
-    <Project Path="src/FcgNotifications.Api/FcgNotifications.Api.csproj" Id="9a9b1e39-97e8-439a-af5f-8d94cfddd9c7" />
     <Project Path="src/FcgNotifications.AppHost/FcgNotifications.AppHost.csproj" Id="a71f6d52-711e-4fef-b8d8-3741af06655d" />
     <Project Path="src/FcgNotifications.Worker/FcgNotifications.Worker.csproj" />
   </Folder>

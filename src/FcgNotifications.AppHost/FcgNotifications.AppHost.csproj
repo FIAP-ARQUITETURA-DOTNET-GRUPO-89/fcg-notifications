@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FcgNotifications.Api\FcgNotifications.Api.csproj" />
     <ProjectReference Include="..\FcgNotifications.Worker\FcgNotifications.Worker.csproj" />
   </ItemGroup>
 
