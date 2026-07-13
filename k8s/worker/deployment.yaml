@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: fcg-notifications-worker
+  namespace: fcg-platform
+
+  labels:
+    app.kubernetes.io/name: fcg-notifications-worker
+    app.kubernetes.io/instance: fcg-notifications-worker
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: fcg-platform
+    app.kubernetes.io/managed-by: kubectl
+
+spec:
+  replicas: 1
+
+  revisionHistoryLimit: 3
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fcg-notifications-worker
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fcg-notifications-worker
+        app.kubernetes.io/instance: fcg-notifications-worker
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: fcg-platform
+
+    spec:
+      containers:
+        - name: fcg-notifications-worker
+
+          image: jondamiao/fcg-notifications-worker:1.0.0-preview.1
+          imagePullPolicy: IfNotPresent
+
+          envFrom:
+            - configMapRef:
+                name: fcg-notifications-worker-config
+            - secretRef:
+                name: fcg-notifications-worker-secret
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "ps aux | grep dotnet | grep -v grep"
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "ps aux | grep dotnet | grep -v grep"
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
