@@ -17,8 +17,8 @@ public static class ConfigureServicesExtensions
 
         services.AddMassTransitRabbitMq(configuration, x =>
         {
-            x.AddConsumer<PaymentProcessedConsumer>().Endpoint(e => e.Name = "notifications-payment-processed"); ;
-            x.AddConsumer<UserCreatedConsumer>();
+            x.AddConsumer<PaymentProcessedConsumer>().Endpoint(e => e.Name = "notifications-payment-processed-events");
+            x.AddConsumer<UserCreatedConsumer>().Endpoint(e => e.Name = "notifications-user-created-events");
         });
 
         return services;
