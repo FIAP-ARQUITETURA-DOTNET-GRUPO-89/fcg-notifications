@@ -9,7 +9,10 @@ public static class TestDataSeeder
 {
     public static async Task SeedAsync(FcgNotificationsDbContext context)
     {
-        if (context.Notifications.Any()) return;
+        if (context.Notifications.Any())
+        {
+            return;
+        }
 
         var notification = new Notification(
             Guid.NewGuid(),

@@ -38,8 +38,9 @@ public class PaymentProcessedConsumerTests : IDisposable
     }
 
     [Fact]
-    public async Task Dado_EventoPagamento_Quando_Consumir_Entao_SalvaNotificacaoComEmailPlaceholder()
+    public async Task Dado_EventoPagamento_Quando_Consumir_Entao_SalvaNotificacaoComEmailDoCliente()
     {
+        // Arrange
         var context = Substitute.For<ConsumeContext<PaymentProcessedEvent>>();
         var @event = new PaymentProcessedEvent(
             OrderId: Guid.NewGuid(),
@@ -47,17 +48,21 @@ public class PaymentProcessedConsumerTests : IDisposable
             CustomerEmail: "cliente@teste.com",
             CustomerName: "Cliente",
             TotalAmount: 100.00m,
-            Status: "Approved"
-        );
+            Status: "Approved");
+
         context.Message.Returns(@event);
 
+        // Act
         await _sut.Consume(context);
 
+        // Assert
         var notification = await _dbContext.Notifications.FirstOrDefaultAsync();
         notification.ShouldNotBeNull();
-        notification.UserEmail.Address.ShouldBe("sem-email@sistema.com");
+        notification.UserEmail.Address.ShouldBe(@event.CustomerEmail);
 
-        await _mediator.Received(1).Publish(Arg.Any<PaymentProcessedEvent>(), default);
+        // Correção: Use Arg.Any<CancellationToken>() para evitar erro de instâncias diferentes
+        await _mediator.Received(1)
+            .Publish(Arg.Any<PaymentProcessedEvent>(), Arg.Any<CancellationToken>());
     }
 
     public void Dispose()
