@@ -1,308 +1,197 @@
-# 🚀 FcgNotifications
+# 🚀 FcgNotifications API
 
-Template de API desenvolvido com **ArchForge**, uma CLI para geração de projetos .NET padronizados.
+Microsserviço de notificação da plataforma **FCG Games**. Este serviço é responsável pelo processamento assíncrono de eventos e entrega de notificações aos usuários. Ele atua como um consumidor de eventos críticos do sistema, garantindo que o usuário seja mantido informado sobre suas atividades na plataforma.
 
-O objetivo do ArchForge é acelerar a criação de novos serviços, eliminando tarefas repetitivas de configuração e fornecendo uma estrutura consistente, testável e pronta para evolução.
+---
 
-## 📑 Sumário
+# 📑 Sumário
 
+- [👁 Visão Geral](#-visão-geral)
 - [📋 Tecnologias Utilizadas](#-tecnologias-utilizadas)
 - [🏛 Arquitetura](#-arquitetura)
 - [📁 Estrutura da Solução](#-estrutura-da-solução)
+- [🔄 Fluxo de Eventos (Mensageria)](#-fluxo-de-eventos-mensageria)
+- [⚙️ Pré-requisitos](#️-pré-requisitos)
 - [▶️ Executando Localmente](#️-executando-localmente)
 - [🗄 Banco de Dados](#-banco-de-dados)
-- [🔐 Autenticação JWT](#-autenticação-jwt)
-  - [Gerando Token Manualmente](#gerando-token-manualmente)
-  - [Policies Disponíveis](#policies-disponíveis)
-- [📡 Coleção Postman](#-coleção-postman)
-- [🧪 Executando Testes](#-executando-testes)
-- [📚 Documentação](#-documentação)
-  - [ADRs](#adrs)
-  - [Diagramas](#diagramas)
-  - [Linguagem Ubíqua](#linguagem-ubíqua)
-- [🎯 Objetivos do Template](#-objetivos-do-template)
+- [🧪 Testes](#-testes)
+- [🌍 Variáveis de Ambiente](#-variáveis-de-ambiente)
+- [📄 Licença](#-licença)
 
-## 📋 Tecnologias Utilizadas
+---
 
-- .NET 10
-- ASP.NET Core Minimal API
-- .NET Aspire
-- MediatR
-- FluentValidation
-- Mapperly
-- Entity Framework Core
-- PostgreSQL
-- JWT Authentication
-- Health Checks
-- Serilog
-- xUnit
-- Shouldly
-- NSubstitute
-- Aspire Testing
-- Respawn
+# 👁 Visão Geral
 
-## 🏛 Arquitetura
+O **FcgNotifications API** é um serviço orientado a eventos (**Event-Driven**) projetado para alta escalabilidade e resiliência.
 
-Este template segue princípios de:
+Sua principal responsabilidade é escutar filas do **RabbitMQ**, processar regras de negócio relacionadas a notificações e persistir o histórico de comunicações enviadas.
 
-- Clean Architecture
-- Domain-Driven Design (DDD)
-- CQRS
-- SOLID
-- Separation of Concerns
+Utiliza o padrão **Worker Service** para processamento em background, garantindo que o sistema seja robusto, desacoplado e altamente resiliente.
 
-### Camadas
+---
 
-| Projeto                    | Responsabilidade                                       |
-| -------------------------- | ------------------------------------------------------ |
-| FcgNotifications.Api             | Endpoints, Middlewares e Configurações                 |
-| FcgNotifications.Application     | Casos de uso, Commands, Queries, Validators e Handlers |
-| FcgNotifications.Domain          | Entidades, Regras de Negócio e Contratos               |
-| FcgNotifications.Infrastructure  | Persistência, EF Core e Repositórios                   |
-| FcgNotifications.IoC             | Registro de dependências                               |
-| FcgNotifications.SharedKernel    | Componentes compartilhados                             |
-| FcgNotifications.ServiceDefaults | Configurações compartilhadas Aspire                    |
-| FcgNotifications.AppHost         | Orquestração Aspire                                    |
+# 📋 Tecnologias Utilizadas
 
-## 📁 Estrutura da Solução
+| Categoria | Tecnologia |
+|-----------|------------|
+| Runtime | .NET 10 |
+| Padrão | Worker Service / Background Tasks |
+| Orquestração | .NET Aspire (Local e Cloud Ready) |
+| Mensageria | MassTransit + RabbitMQ |
+| Persistência | Entity Framework Core + PostgreSQL |
+| Mediação | MediatR + CQRS + OperationResult |
+| Testes | xUnit, Shouldly, NSubstitute, Respawn e Testcontainers |
+
+---
+
+# 🏛 Arquitetura
+
+O projeto segue os princípios de **Clean Architecture** e **Domain-Driven Design (DDD)**, organizando o código em camadas bem definidas.
+
+| Camada | Responsabilidade |
+|---------|------------------|
+| **FcgNotifications.Worker** | Entry Point do Worker, Consumers e Extensions |
+| **FcgNotifications.Application** | Casos de Uso, Commands, Handlers e Loggers |
+| **FcgNotifications.Domain** | Agregados (Notification), Enums e Interfaces |
+| **FcgNotifications.Infrastructure** | Repositórios, EF Core, Migrations e Messaging |
+| **FcgNotifications.IoC** | Registro de Dependências |
+
+---
+
+# 📁 Estrutura da Solução
 
 ```text
 src/
-├── FcgNotifications.Api
-├── FcgNotifications.AppHost
-├── FcgNotifications.Application
-├── FcgNotifications.Domain
-├── FcgNotifications.Infrastructure
-├── FcgNotifications.IoC
-├── FcgNotifications.ServiceDefaults
-└── FcgNotifications.SharedKernel
+├── FcgNotifications.Worker          # Entry Point do serviço de background
+├── FcgNotifications.Application     # Casos de uso e Handlers
+├── FcgNotifications.Domain          # Entidades e regras de negócio
+├── FcgNotifications.Infrastructure  # Persistência e Mensageria
+├── FcgNotifications.IoC             # Injeção de Dependências
+└── FcgNotifications.SharedKernel    # Código compartilhado
 
 tests/
-├── FcgNotifications.UnitTests
-└── FcgNotifications.IntegrationTests
-
-docs/
-├── adrs
-├── api-collection
-├── diagrams
-└── linguagem-ubiqua
+├── FcgNotifications.UnitTests         # Testes de Handlers e Domínio
+└── FcgNotifications.IntegrationTests  # Testes de Consumers (Integration)
 ```
 
-## ▶️ Executando Localmente
+---
 
-### Restaurar dependências
+# 🔄 Fluxo de Eventos (Mensageria)
+
+A API atua como um consumidor de eventos, processando mensagens enviadas por outros microsserviços da plataforma.
+
+## Eventos Consumidos
+
+- `UserCreatedEvent` *(via UserCreatedConsumer)*
+- `PaymentProcessedEvent` *(via PaymentProcessedConsumer)*
+
+## Broker
+
+- RabbitMQ
+
+## Resiliência
+
+Cada Consumer possui **Retry Policy** configurada via **MassTransit**, utilizando **Exponential Backoff**, garantindo que falhas temporárias (como indisponibilidade momentânea do banco de dados) não resultem em perda de mensagens.
+
+---
+
+# ⚙️ Pré-requisitos
+
+Antes de executar a aplicação, instale:
+
+- .NET SDK 10.0 ou superior
+- Docker Desktop
+- Workload do .NET Aspire
+
+## Instalação do Aspire
 
 ```bash
-dotnet restore
+dotnet workload install aspire
 ```
 
-### Compilar
+---
 
-```bash
-dotnet build
-```
+# ▶️ Executando Localmente
 
-### Executar com Aspire
+O ambiente completo é provisionado automaticamente pelo **.NET Aspire**.
+
+Execute:
 
 ```bash
 dotnet run --project src/FcgNotifications.AppHost
 ```
 
-### Executar apenas a API
+Após iniciar a aplicação, o **Aspire Dashboard** será aberto automaticamente, exibindo:
+
+- Logs da aplicação
+- Métricas
+- Status dos containers
+- PostgreSQL
+- RabbitMQ
+
+---
+
+# 🗄 Banco de Dados
+
+A persistência utiliza **Entity Framework Core** com **PostgreSQL**.
+
+O histórico de notificações é armazenado para fins de auditoria e consulta pelo usuário.
+
+## Criando uma Migration
 
 ```bash
-dotnet run --project src/FcgNotifications.Api
+dotnet ef migrations add NomeDaMigration \
+-p src/FcgNotifications.Infrastructure \
+-s src/FcgNotifications.Worker
 ```
 
-## 🗄 Banco de Dados
+---
 
-Criar migration:
+# 🧪 Testes
 
-```bash
-dotnet ef migrations add MinhaMigration -p src/FcgNotifications.Infrastructure -s src/FcgNotifications.Api --output-dir Database/Migrations
-```
+## Testes Unitários
 
-Aplicar migrations:
-
-```bash
-dotnet ef database update -p src/FcgNotifications.Infrastructure -s src/FcgNotifications.Api
-```
-
-## 🔐 Autenticação JWT
-
-O template já possui autenticação JWT configurada.
-
-Configuração padrão:
-
-```json
-"JwtSettings": {
-    "Issuer": "FcgNotifications-Issuer",
-    "SecurityKey": "FcgNotifications_Secret_Key_2026_High_Security_Token",
-    "ExpirationHours": 2
-}
-```
-
-### Gerando Token Manualmente
-
-Acesse:
-
-🌐 https://jwt.io
-
-#### Header
-
-```json
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}
-```
-
-#### Payload para perfil Admin
-
-```json
-{
-  "iss": "FcgNotifications-Issuer",
-  "sub": "1",
-  "name": "Administrador",
-  "role": "Admin",
-  "exp": 1893456000
-}
-```
-
-#### Payload para perfil Customer
-
-```json
-{
-  "iss": "FcgNotifications-Issuer",
-  "sub": "2",
-  "name": "Cliente",
-  "role": "Customer",
-  "exp": 1893456000
-}
-```
-
-#### Secret
-
-```text
-FcgNotifications_Secret_Key_2026_High_Security_Token
-```
-
-Após gerar o token, utilize:
-
-```http
-Authorization: Bearer {TOKEN}
-```
-
-### Policies Disponíveis
-
-| Policy         | Roles Permitidas |
-| -------------- | ---------------- |
-| CustomerPolicy | Admin, Customer  |
-| AdminPolicy    | Admin            |
-
-## 📡 Coleção Postman
-
-A coleção da API está disponível em:
-
-```text
-docs/api-collection/
-```
-
-Importe o arquivo `.json` no Postman para iniciar os testes rapidamente.
-
-## 🧪 Executando Testes
-
-### Todos os testes
-
-```bash
-dotnet test
-```
-
-### Unitários
+Focados na lógica dos Handlers e regras de negócio do domínio.
 
 ```bash
 dotnet test tests/FcgNotifications.UnitTests
 ```
 
-### Integração
+---
+
+## Testes de Integração
+
+Validam o fluxo completo de mensageria:
+
+- Envio do evento pelo Bus
+- Processamento pelo Consumer
+- Persistência no banco de dados real
+
+Os testes utilizam:
+
+- Testcontainers
+- Respawn
+
+para garantir isolamento entre execuções.
 
 ```bash
 dotnet test tests/FcgNotifications.IntegrationTests
 ```
 
-## 📊 Cobertura de Testes
+---
 
-O template já possui suporte à geração de cobertura de testes utilizando Coverlet.
+# 🌍 Variáveis de Ambiente
 
-### Gerar cobertura dos testes unitários
+Como a aplicação utiliza **.NET Aspire**, a configuração é gerenciada automaticamente.
 
-```bash
-dotnet test tests/FcgNotifications.UnitTests --collect:"XPlat Code Coverage" --settings .runsettings
-```
+| Variável | Descrição |
+|----------|-----------|
+| `ConnectionStrings:Default` | String de conexão com PostgreSQL |
+| `ConnectionStrings:rabbitmq` | Endereço do RabbitMQ |
+| `MassTransit:RetryLimit` | Quantidade máxima de tentativas de reprocessamento (Padrão: 5) |
 
-### Instalar o ReportGenerator
+---
 
-Caso ainda não possua a ferramenta instalada:
+# 📄 Licença
 
-```bash
-dotnet tool install -g dotnet-reportgenerator-globaltool
-```
-
-### Gerar relatório HTML
-
-```bash
-reportgenerator -reports:"**/coverage.cobertura.xml" -targetdir:"coverage-report" -reporttypes:"Html;MarkdownSummary"
-```
-
-### Visualizar relatório
-
-Abra o arquivo:
-
-```text
-coverage-report/index.html
-```
-
-## 📚 Documentação
-
-A documentação do projeto fica centralizada na pasta:
-
-```text
-docs/
-```
-
-### ADRs
-
-```text
-docs/adrs
-```
-
-Registro das decisões arquiteturais.
-
-### Diagramas
-
-```text
-docs/diagrams
-```
-
-Diagramas de arquitetura e fluxo.
-
-### Linguagem Ubíqua
-
-```text
-docs/linguagem-ubiqua
-```
-
-Glossário do domínio.
-
-## 🎯 Objetivos do Template
-
-Este template foi criado para fornecer:
-
-- Estrutura pronta
-- Padronização entre serviços
-- Alta cobertura de testes
-- Baixo tempo de setup
-- Facilidade de manutenção
-- Evolução arquitetural consistente
-
-Gerado com ❤️ utilizando ArchForge.
+Projeto desenvolvido para a plataforma **FCG Games**.
