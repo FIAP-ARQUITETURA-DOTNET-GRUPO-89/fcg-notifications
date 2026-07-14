@@ -1,4 +1,4 @@
-using FcgNotifications.Domain.Entities;
+﻿using FcgNotifications.Domain.Entities;
 using Shouldly;
 
 namespace FcgNotifications.UnitTests.Domain.Entities;
@@ -8,10 +8,8 @@ public class BaseEntityTests
     [Fact]
     public void Dado_NovaEntidade_Quando_Criada_Entao_PossuiIdECreatedAt()
     {
-        // Arrange & Act
         var entity = CreateTestEntity();
 
-        // Assert
         entity.Id.ShouldNotBe(Guid.Empty);
         entity.CreatedAt.ShouldBeGreaterThan(DateTime.MinValue);
         entity.UpdatedAt.ShouldBeNull();
@@ -20,36 +18,25 @@ public class BaseEntityTests
     [Fact]
     public void Dado_DuasEntidadesComMesmoId_Quando_Comparadas_Entao_SaoIguais()
     {
-        // Arrange
         var entity1 = CreateTestEntity();
         var entity2 = CreateTestEntity();
 
         typeof(BaseEntity)
-            .GetProperty("Id")!
+            .GetProperty("Id", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!
             .SetValue(entity2, entity1.Id);
 
-        // Act
-        var result = entity1.Equals(entity2);
-
-        // Assert
-        result.ShouldBeTrue();
+        entity1.Equals(entity2).ShouldBeTrue();
     }
 
     [Fact]
     public void Dado_EntidadesDiferentes_Quando_Comparadas_Entao_NaoSaoIguais()
     {
-        // Arrange
         var entity1 = CreateTestEntity();
         var entity2 = CreateTestEntity();
 
-        // Act
-        var result = entity1.Equals(entity2);
-
-        // Assert
-        result.ShouldBeFalse();
+        entity1.Equals(entity2).ShouldBeFalse();
     }
 
     private static TestEntity CreateTestEntity() => new();
-
     private class TestEntity : BaseEntity { }
 }
