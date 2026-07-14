@@ -2,7 +2,6 @@
 using FcgNotifications.Domain.Entities;
 using FcgNotifications.Domain.Enums;
 using FcgNotifications.Domain.Repositories;
-using FcgUsers.Domain.ValueObjects;
 using FgcGames.EventContracts.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -19,22 +18,20 @@ public sealed class PaymentProcessedHandler(
     public async Task<Result<bool>> Handle(ProcessPaymentResultCommand command, CancellationToken cancellationToken)
     {
         if (command.Status != PaymentStatus.Approved)
-        {
-            return new Exception();
-        }
+            return Result.Error<bool>(new Exception("Pagamento não aprovado."));
 
-        var email = Email.Create("email@email.com");
+        var user = await userRepository.GetByIdAsync(command.UserId);
+        if (user == null)
+            return Result.Error<bool>(new Exception("Usuário não encontrado."));
 
         var entity = new Notification(
             command.UserId,
-            email,
-            $"Olá UserName, seu pagamento do pedido {command.OrderId} foi aprovado!",
+            user.Email,
+            $"Olá {user.Name}, seu pagamento do pedido {command.OrderId} foi aprovado!",
             NotificationType.PurchaseConfirmation);
 
         repository.Add(entity);
         await repository.SaveChangesAsync();
-
-        logger.LogInformation("Notificação de confirmação enviada para pedido {OrderId}", command.OrderId);
 
         entity.MarkAsSent();
         await repository.SaveChangesAsync();

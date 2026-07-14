@@ -6,19 +6,34 @@ using MediatR;
 
 namespace FcgNotifications.Worker.Consumers;
 
-public sealed partial class UserCreatedConsumer(
+public sealed class UserCreatedConsumer(
     IMediator mediator,
     ILogger<UserCreatedConsumer> logger)
     : IConsumer<UserCreatedEvent>
 {
     public async Task Consume(ConsumeContext<UserCreatedEvent> context)
     {
-        logger.LogInformation("UserCreatedConsumer recebeu UserId: {UserId}", context.Message.UserId);
+        var eventData = context.Message;
 
-        var createUserCommand = new CreateUserCommand(context.Message.UserId, context.Message.Name, context.Message.Email);
+        logger.LogInformation("Processando UserCreatedEvent para UserId: {UserId}", eventData.UserId);
+
+        var createUserCommand = new CreateUserCommand(
+            eventData.UserId,
+            eventData.Name,
+            eventData.Email);
+
         await mediator.Send(createUserCommand, context.CancellationToken);
 
-        var createNotificationCommand = new CreateNotificationCommand(context.Message.UserId, context.Message.Email, "COLOQUE AQUI A MENSAGEM", NotificationType.Welcome);
+        var welcomeMessage = $"Olá {eventData.Name}, bem-vindo à plataforma FCG Games!";
+
+        var createNotificationCommand = new CreateNotificationCommand(
+            eventData.UserId,
+            eventData.Email,
+            welcomeMessage,
+            NotificationType.Welcome);
+
         await mediator.Send(createNotificationCommand, context.CancellationToken);
+
+        logger.LogInformation("Usuário {UserId} registrado e notificação de boas-vindas criada com sucesso.", eventData.UserId);
     }
 }
