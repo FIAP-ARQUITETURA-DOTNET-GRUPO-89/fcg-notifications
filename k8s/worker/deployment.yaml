@@ -36,7 +36,7 @@ spec:
       containers:
         - name: fcg-notifications-worker
 
-          image: jondamiao/fcg-notifications-worker:1.0.0-preview.1
+          image: jondamiao/fcg-notifications-worker:1.0.0-preview.6
           imagePullPolicy: IfNotPresent
 
           envFrom:
@@ -44,6 +44,11 @@ spec:
                 name: fcg-notifications-worker-config
             - secretRef:
                 name: fcg-notifications-worker-secret
+
+          env:
+            # Define se as migrations do EF Core serão executadas no startup da aplicação
+            - name: RUN_MIGRATION
+              value: "true"
 
           resources:
             requests:
