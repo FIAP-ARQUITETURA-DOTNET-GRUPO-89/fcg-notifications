@@ -22,5 +22,6 @@ public static class WorkerServiceCollectionExtensions
             npgsql => npgsql.EnableRetryOnFailure()));
 
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
     }
 }
