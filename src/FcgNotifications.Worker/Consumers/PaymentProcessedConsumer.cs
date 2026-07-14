@@ -1,46 +1,28 @@
-﻿using FcgNotifications.Domain.Entities;
-using FcgNotifications.Domain.Enums;
-using FcgNotifications.Domain.Events;
-using FcgNotifications.Infrastructure.Database;
-using FcgUsers.Domain.ValueObjects;
+﻿using FcgNotifications.Application.Commands;
+using FgcGames.EventContracts.Events;
 using MassTransit;
 using MediatR;
 
 namespace FcgNotifications.Worker.Consumers;
 
-public sealed partial class PaymentProcessedConsumer(
+public sealed class PaymentProcessedConsumer(
     IMediator mediator,
-    FcgNotificationsDbContext dbContext,
     ILogger<PaymentProcessedConsumer> logger)
-    : IConsumer<PaymentProcessedEvent>
+: IConsumer<PaymentProcessedEvent>
 {
     public async Task Consume(ConsumeContext<PaymentProcessedEvent> context)
     {
-        LogPaymentProcessedReceived(logger, context.Message.OrderId);
-
-        var email = Email.Create(context.Message.CustomerEmail);
-
-        var notification = new Notification(
-            context.Message.UserId,
-            email,
-            $"Seu pedido {context.Message.OrderId} foi processado com sucesso!",
-            NotificationType.PurchaseConfirmation
-        );
-
-        await dbContext.Notifications.AddAsync(notification);
-        await dbContext.SaveChangesAsync();
-
         logger.LogInformation(
-            "Notificação de pagamento salva para o Pedido: {OrderId}",
-            context.Message.OrderId);
+            "PaymentProcessed recebido. OrderId: {OrderId}, Status: {Status}.",
+            context.Message.OrderId,
+            context.Message.Status);
 
-        await mediator.Publish(context.Message);
+        var command = new ProcessPaymentResultCommand(
+                            context.Message.OrderId,
+                            context.Message.UserId,
+                            context.Message.GameId,
+                            context.Message.Status);
+
+        await mediator.Send(command, context.CancellationToken);
     }
-
-    [LoggerMessage(
-        Level = LogLevel.Information,
-        Message = "Evento PaymentProcessed recebido para o Pedido: {OrderId}")]
-    static partial void LogPaymentProcessedReceived(
-        ILogger logger,
-        Guid orderId);
 }

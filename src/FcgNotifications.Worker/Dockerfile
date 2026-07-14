@@ -1,30 +1,46 @@
-# Acesse https://aka.ms/customizecontainer para saber como personalizar seu contêiner de depuração e como o Visual Studio usa este Dockerfile para criar suas imagens para uma depuração mais rápida.
+﻿# syntax=docker/dockerfile:1.7
 
-# Esta fase é usada durante a execução no VS no modo rápido (Padrão para a configuração de Depuração)
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
-USER $APP_UID
-WORKDIR /app
-
-
-# Esta fase é usada para compilar o projeto de serviço
+########################################
+# Build
+########################################
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
 ARG BUILD_CONFIGURATION=Release
+
 WORKDIR /src
-COPY ["Directory.Packages.props", "."]
-COPY ["Directory.Build.props", "."]
-COPY ["src/FcgNotifications.Worker/FcgNotifications.Worker.csproj", "src/FcgNotifications.Worker/"]
-RUN dotnet restore "./src/FcgNotifications.Worker/FcgNotifications.Worker.csproj"
+
+COPY global.json .
+COPY Directory.Build.props .
+COPY Directory.Packages.props .
+
+# Projetos
+COPY src/FcgNotifications.Worker/FcgNotifications.Worker.csproj src/FcgNotifications.Worker/
+COPY src/FcgNotifications.Application/FcgNotifications.Application.csproj src/FcgNotifications.Application/
+COPY src/FcgNotifications.Domain/FcgNotifications.Domain.csproj src/FcgNotifications.Domain/
+COPY src/FcgNotifications.Infrastructure/FcgNotifications.Infrastructure.csproj src/FcgNotifications.Infrastructure/
+COPY src/FcgNotifications.IoC/FcgNotifications.IoC.csproj src/FcgNotifications.IoC/
+COPY src/FcgNotifications.ServiceDefaults/FcgNotifications.ServiceDefaults.csproj src/FcgNotifications.ServiceDefaults/
+COPY src/FcgNotifications.SharedKernel/FcgNotifications.SharedKernel.csproj src/FcgNotifications.SharedKernel/
+
+RUN dotnet restore src/FcgNotifications.Worker/FcgNotifications.Worker.csproj
+
 COPY . .
-WORKDIR "/src/src/FcgNotifications.Worker"
-RUN dotnet build "./FcgNotifications.Worker.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Esta fase é usada para publicar o projeto de serviço a ser copiado para a fase final
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./FcgNotifications.Worker.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish src/FcgNotifications.Worker/FcgNotifications.Worker.csproj \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    --no-restore \
+    /p:UseAppHost=false
 
-# Esta fase é usada na produção ou quando executada no VS no modo normal (padrão quando não está usando a configuração de Depuração)
-FROM base AS final
+########################################
+# Runtime
+########################################
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
 WORKDIR /app
-COPY --from=publish /app/publish .
+
+USER $APP_UID
+
+COPY --from=build /app/publish .
+
 ENTRYPOINT ["dotnet", "FcgNotifications.Worker.dll"]

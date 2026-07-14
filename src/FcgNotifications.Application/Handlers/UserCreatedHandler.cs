@@ -1,51 +1,35 @@
-﻿using FcgNotifications.Domain.Entities;
-using FcgNotifications.Domain.Enums;
-using FcgNotifications.Domain.Events;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Domain.Entities;
 using FcgNotifications.Domain.Repositories;
 using FcgUsers.Domain.ValueObjects;
 using MediatR;
-using Microsoft.Extensions.Logging;
+using OperationResult;
 
 namespace FcgNotifications.Application.Handlers;
 
-public sealed class UserCreatedHandler(
-    INotificationRepository repository,
-    ILogger<UserCreatedHandler> logger)
-    : INotificationHandler<UserCreatedEvent>
+public sealed class CreateUserCommandHandler(
+    IUserRepository repository)
+: IRequestHandler<CreateUserCommand, Result<bool>>
 {
-    public async Task Handle(UserCreatedEvent notification, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(
+        CreateUserCommand request,
+        CancellationToken cancellationToken)
     {
-        var email = Email.Create(notification.Email);
+        var exists = await repository.ExistsAsync(request.UserId, cancellationToken);
 
-        var entity = new Notification(
-            notification.UserId,
-            email,
-            $"Bem-vindo, {notification.Name}!",
-            NotificationType.Welcome);
+        if (exists)
+        {
+            return Result.Success(true);
+        }
 
-        repository.Add(entity);
+        var email = Email.Create(request.Email);
+
+        var user = new User(request.UserId, request.Name, email);
+
+        repository.Add(user);
+
         await repository.SaveChangesAsync();
 
-        try
-        {
-            logger.LogInformation("Simulando envio de e-mail de boas-vindas para: {Email}", email.Address);
-
-            await Task.Delay(100, cancellationToken);
-
-            entity.MarkAsSent();
-            await repository.SaveChangesAsync();
-
-            logger.LogInformation("Notificação de boas-vindas registrada com sucesso para o usuário {UserId}", notification.UserId);
-        }
-        catch (Exception ex)
-        {
-            
-            logger.LogError(ex, "Erro ao enviar notificação para o usuário {UserId}", notification.UserId);
-
-            entity.MarkAsFailed();
-            await repository.SaveChangesAsync();
-
-            throw;
-        }
+        return Result.Success(true);
     }
 }
