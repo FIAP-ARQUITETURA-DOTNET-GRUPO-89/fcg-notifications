@@ -31,15 +31,20 @@ public class PaymentProcessedHandlerTests
     [Fact]
     public async Task Dado_StatusAprovadoUsuarioExistente_Quando_Handle_Entao_DeveSalvarESetarComoEnviado()
     {
+        // Arrange
         var userId = Guid.NewGuid();
         var command = new ProcessPaymentResultCommand(Guid.NewGuid(), userId, Guid.NewGuid(), PaymentStatus.Approved);
         var user = new User(userId, "Name", Email.Create("a@a.com"));
-        _userRepository.GetByIdAsync(userId).Returns(user);
 
+        _userRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(user);
+
+        // Act
         var result = await _sut.Handle(command, CancellationToken.None);
 
+        // Assert
         result.IsSuccess.ShouldBeTrue();
         _repository.Received(1).Add(Arg.Any<Notification>());
+
         await _repository.Received(2).SaveChangesAsync();
     }
 }

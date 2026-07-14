@@ -27,7 +27,11 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncL
             var notification = await _fixture.ExecuteDbContextAsync(async db =>
                 await db.Notifications.FirstOrDefaultAsync(n => n.UserId == userId));
 
-            if (notification != null) return notification;
+            if (notification != null)
+            {
+                return notification;
+            }
+
             await Task.Delay(500);
         }
         return null;
@@ -36,15 +40,15 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncL
     [Fact]
     public async Task Deve_Criar_Notificacao_Ao_Consumir_UserCreatedEvent()
     {
-        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq");
+        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
         var busControl = Bus.Factory.CreateUsingRabbitMq(cfg => cfg.Host(rabbitConnectionString));
-        await busControl.StartAsync();
+        await busControl.StartAsync(TestContext.Current.CancellationToken);
 
         var userId = Guid.NewGuid();
         var email = "teste@fiap.com";
         var message = new UserCreatedEvent(userId, "Teste", email, DateTime.UtcNow);
 
-        await busControl.Publish(message);
+        await busControl.Publish(message, TestContext.Current.CancellationToken);
 
         var notification = await WaitForNotificationAsync(userId);
 
@@ -52,16 +56,16 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncL
         notification.UserEmail.Address.ShouldBe(email);
         notification.Type.ShouldBe(NotificationType.Welcome);
 
-        await busControl.StopAsync();
+        await busControl.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
     public async Task Deve_Criar_Notificacao_Ao_Consumir_PaymentProcessedEvent_Aprovado()
     {
         // Arrange
-        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq");
+        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
         var busControl = Bus.Factory.CreateUsingRabbitMq(cfg => cfg.Host(rabbitConnectionString));
-        await busControl.StartAsync();
+        await busControl.StartAsync(TestContext.Current.CancellationToken);
 
         var orderId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -83,7 +87,7 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncL
 
         // Act
         var endpoint = await busControl.GetSendEndpoint(new Uri("queue:notifications-payment-processed-events"));
-        await endpoint.Send(message);
+        await endpoint.Send(message, TestContext.Current.CancellationToken);
 
         var notification = await WaitForNotificationAsync(userId);
 
@@ -92,6 +96,6 @@ public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncL
         notification.UserEmail.Address.ShouldBe(customerEmail);
         notification.Message.ShouldContain(orderId.ToString());
 
-        await busControl.StopAsync();
+        await busControl.StopAsync(TestContext.Current.CancellationToken);
     }
 }
