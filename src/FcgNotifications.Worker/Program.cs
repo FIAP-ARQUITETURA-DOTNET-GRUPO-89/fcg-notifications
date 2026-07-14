@@ -17,4 +17,7 @@ builder.AddServiceDefaults();
 builder.Services.ConfigureServices(builder.Configuration);
 
 var host = builder.Build();
+
+await host.ApplyMigrationsAsync();
+
 host.Run();

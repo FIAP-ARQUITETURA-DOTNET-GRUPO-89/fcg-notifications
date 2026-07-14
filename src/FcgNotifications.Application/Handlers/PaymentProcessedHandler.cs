@@ -1,39 +1,41 @@
-﻿using FcgNotifications.Domain.Entities;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Domain.Entities;
 using FcgNotifications.Domain.Enums;
-using FcgNotifications.Domain.Events;
 using FcgNotifications.Domain.Repositories;
-using FcgUsers.Domain.ValueObjects;
+using FgcGames.EventContracts.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using OperationResult;
 
 namespace FcgNotifications.Application.Handlers;
 
 public sealed class PaymentProcessedHandler(
     INotificationRepository repository,
+    IUserRepository userRepository,
     ILogger<PaymentProcessedHandler> logger)
-    : INotificationHandler<PaymentProcessedEvent>
+: IRequestHandler<ProcessPaymentResultCommand, Result<bool>>
 {
-    public async Task Handle(PaymentProcessedEvent notification, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(ProcessPaymentResultCommand command, CancellationToken cancellationToken)
     {
-        if (notification.Status != "Approved")
-        {
-            return;
-        }
+        if (command.Status != PaymentStatus.Approved)
+            return Result.Error<bool>(new Exception("Pagamento não aprovado."));
 
-        var email = Email.Create(notification.CustomerEmail);
+        var user = await userRepository.GetByIdAsync(command.UserId);
+        if (user == null)
+            return Result.Error<bool>(new Exception("Usuário não encontrado."));
 
         var entity = new Notification(
-            notification.UserId,
-            email,
-            $"Olá {notification.CustomerName}, seu pagamento do pedido {notification.OrderId} foi aprovado!",
+            command.UserId,
+            user.Email,
+            $"Olá {user.Name}, seu pagamento do pedido {command.OrderId} foi aprovado!",
             NotificationType.PurchaseConfirmation);
 
         repository.Add(entity);
         await repository.SaveChangesAsync();
 
-        logger.LogInformation("Notificação de confirmação enviada para pedido {OrderId}", notification.OrderId);
-
         entity.MarkAsSent();
         await repository.SaveChangesAsync();
+
+        return Result.Success(true);
     }
 }
