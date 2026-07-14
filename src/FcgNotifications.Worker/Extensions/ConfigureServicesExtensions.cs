@@ -1,8 +1,8 @@
 ﻿using FcgNotifications.Infrastructure.Database;
+using FcgNotifications.Infrastructure.Messaging;
 using FcgNotifications.IoC;
 using FcgNotifications.Worker.Consumers;
 using Microsoft.EntityFrameworkCore;
-using MassTransit;
 
 namespace FcgNotifications.Worker.Extensions;
 
@@ -15,15 +15,10 @@ public static class ConfigureServicesExtensions
         services.AddDbContext<FcgNotificationsDbContext>(options =>
             options.UseNpgsql(configuration.GetConnectionString("Default")));
 
-        services.AddMassTransit(x =>
+        services.AddMassTransitRabbitMq(configuration, x =>
         {
             x.AddConsumer<PaymentProcessedConsumer>();
             x.AddConsumer<UserCreatedConsumer>();
-
-            x.UsingRabbitMq((context, cfg) =>
-            {
-                cfg.ConfigureEndpoints(context);
-            });
         });
 
         return services;
