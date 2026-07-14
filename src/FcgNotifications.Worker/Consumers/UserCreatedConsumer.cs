@@ -1,8 +1,8 @@
 ﻿using FcgNotifications.Domain.Entities;
-using FcgNotifications.Domain.Events;
 using FcgNotifications.Domain.Enums;
-using FcgUsers.Domain.ValueObjects;
+using FcgNotifications.Domain.Events;
 using FcgNotifications.Infrastructure.Database;
+using FcgUsers.Domain.ValueObjects;
 using MassTransit;
 using MediatR;
 
@@ -12,27 +12,36 @@ public sealed partial class UserCreatedConsumer(
     IMediator mediator,
     FcgNotificationsDbContext dbContext,
     ILogger<UserCreatedConsumer> logger)
-: IConsumer<UserCreatedEvent>
+    : IConsumer<UserCreatedEvent>
 {
     public async Task Consume(ConsumeContext<UserCreatedEvent> context)
     {
-        LogUserCreatedReceived(logger, context.Message.UserId, context.Message.Email);
+        Console.WriteLine($"UserCreatedConsumer recebeu: {context.Message.UserId}");
 
-        var email = Email.Create(context.Message.Email);
+        try
+        {
+            LogUserCreatedReceived(logger, context.Message.UserId, context.Message.Email);
 
-        var notification = new Notification(
-            context.Message.UserId,
-            email,
-            "Bem-vindo à nossa plataforma!",
-            NotificationType.Welcome
-        );
+            var email = Email.Create(context.Message.Email);
 
-        await dbContext.Notifications.AddAsync(notification);
-        await dbContext.SaveChangesAsync();
+            var notification = new Notification(
+                context.Message.UserId,
+                email,
+                "Bem-vindo à nossa plataforma!",
+                NotificationType.Welcome);
 
-        logger.LogInformation("Notificação salva para o UserId: {UserId}", context.Message.UserId);
+            await dbContext.Notifications.AddAsync(notification);
+            await dbContext.SaveChangesAsync();
 
-        await mediator.Publish(context.Message);
+            logger.LogInformation("Notificação salva para o UserId: {UserId}", context.Message.UserId);
+
+            await mediator.Publish(context.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erro ao consumir UserCreatedEvent");
+            throw;
+        }
     }
 
     [LoggerMessage(

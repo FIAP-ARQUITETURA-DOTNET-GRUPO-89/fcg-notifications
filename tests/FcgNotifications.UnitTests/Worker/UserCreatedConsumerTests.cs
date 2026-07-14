@@ -40,16 +40,21 @@ public class UserCreatedConsumerTests : IDisposable
     [Fact]
     public async Task Dado_EventoValido_Quando_Consumir_Entao_SalvaNotificacaoEPublishMediatR()
     {
+        // Arrange
         var context = Substitute.For<ConsumeContext<UserCreatedEvent>>();
         var @event = new UserCreatedEvent(Guid.NewGuid(), "Teste", "teste@teste.com", DateTime.UtcNow);
         context.Message.Returns(@event);
 
+        // Act
         await _sut.Consume(context);
 
+        // Assert
         var notification = await _dbContext.Notifications.FirstOrDefaultAsync();
         notification.ShouldNotBeNull();
         notification.UserEmail.Address.ShouldBe("teste@teste.com");
-        await _mediator.Received(1).Publish(Arg.Any<UserCreatedEvent>(), default);
+
+        await _mediator.Received(1)
+            .Publish(Arg.Any<UserCreatedEvent>(), Arg.Any<CancellationToken>());
     }
 
     public void Dispose()

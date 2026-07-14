@@ -1,8 +1,8 @@
 ﻿using FcgNotifications.Domain.Entities;
-using FcgNotifications.Domain.Events;
 using FcgNotifications.Domain.Enums;
-using FcgUsers.Domain.ValueObjects;
+using FcgNotifications.Domain.Events;
 using FcgNotifications.Infrastructure.Database;
+using FcgUsers.Domain.ValueObjects;
 using MassTransit;
 using MediatR;
 
@@ -12,17 +12,17 @@ public sealed partial class PaymentProcessedConsumer(
     IMediator mediator,
     FcgNotificationsDbContext dbContext,
     ILogger<PaymentProcessedConsumer> logger)
-: IConsumer<PaymentProcessedEvent>
+    : IConsumer<PaymentProcessedEvent>
 {
     public async Task Consume(ConsumeContext<PaymentProcessedEvent> context)
     {
         LogPaymentProcessedReceived(logger, context.Message.OrderId);
 
-        var emailPlaceholder = Email.Create("sem-email@sistema.com");
+        var email = Email.Create(context.Message.CustomerEmail);
 
         var notification = new Notification(
             context.Message.UserId,
-            emailPlaceholder,
+            email,
             $"Seu pedido {context.Message.OrderId} foi processado com sucesso!",
             NotificationType.PurchaseConfirmation
         );
@@ -30,11 +30,17 @@ public sealed partial class PaymentProcessedConsumer(
         await dbContext.Notifications.AddAsync(notification);
         await dbContext.SaveChangesAsync();
 
-        logger.LogInformation("Notificação de pagamento salva para o Pedido: {OrderId} (E-mail não disponível)", context.Message.OrderId);
+        logger.LogInformation(
+            "Notificação de pagamento salva para o Pedido: {OrderId}",
+            context.Message.OrderId);
 
         await mediator.Publish(context.Message);
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Evento PaymentProcessed recebido para o Pedido: {OrderId}")]
-    static partial void LogPaymentProcessedReceived(ILogger logger, Guid orderId);
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Evento PaymentProcessed recebido para o Pedido: {OrderId}")]
+    static partial void LogPaymentProcessedReceived(
+        ILogger logger,
+        Guid orderId);
 }
