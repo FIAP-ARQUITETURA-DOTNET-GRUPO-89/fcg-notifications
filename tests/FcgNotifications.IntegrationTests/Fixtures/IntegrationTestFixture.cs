@@ -27,6 +27,8 @@ public class IntegrationTestFixture : IAsyncLifetime
         await _dbManager.InitializeAsync();
     }
 
+    public async Task ResetDatabaseAsync() => await _dbManager.ResetAsync();
+
     public HttpClient CreateClient() => App.CreateHttpClient("fcgnotifications-worker");
 
     public async Task<T> ExecuteDbContextAsync<T>(Func<FcgNotificationsDbContext, Task<T>> action)

@@ -1,30 +1,32 @@
-﻿//using FcgNotifications.Application.Handlers;
-//using FcgNotifications.Domain.Entities;
-//using FcgNotifications.Domain.Events;
-//using FcgNotifications.Domain.Repositories;
-//using Microsoft.Extensions.Logging;
-//using NSubstitute;
-//using Shouldly;
-//public class UserCreatedHandlerTests
-//{
-//    private readonly INotificationRepository _repository = Substitute.For<INotificationRepository>();
-//    private readonly UserCreatedHandler _sut;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Worker.Consumers;
+using FgcGames.EventContracts.Events;
+using MassTransit;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 
-//    public UserCreatedHandlerTests() => _sut = new UserCreatedHandler(_repository, Substitute.For<ILogger<UserCreatedHandler>>());
+public class UserCreatedConsumerTests
+{
+    private readonly IMediator _mediator = Substitute.For<IMediator>();
+    private readonly UserCreatedConsumer _sut;
 
-//    [Fact]
-//    public async Task Dado_ErroNoEnvio_Quando_Handle_Entao_DeveMarcarComoFailedEPropagarExcecao()
-//    {
-//        // Arrange
-//        var @event = new UserCreatedEvent(Guid.NewGuid(), "Nome", "a@a.com", DateTime.UtcNow);
-//        var repo = Substitute.For<INotificationRepository>();
-//        var sut = new UserCreatedHandler(repo, Substitute.For<ILogger<UserCreatedHandler>>());
+    public UserCreatedConsumerTests() =>
+        _sut = new UserCreatedConsumer(_mediator, Substitute.For<ILogger<UserCreatedConsumer>>());
 
-//        repo.When(x => x.SaveChangesAsync()).Do(x => throw new Exception("Erro"));
+    [Fact]
+    public async Task Dado_EventoValido_Quando_Consumir_Entao_DeveEnviarComandosDeCriacaoDeUsuarioENotificacao()
+    {
+        // Arrange
+        var context = Substitute.For<ConsumeContext<UserCreatedEvent>>();
+        var eventData = new UserCreatedEvent(Guid.NewGuid(), "Camila", "camila@test.com", DateTime.UtcNow);
+        context.Message.Returns(eventData);
 
-//        // Act & Assert
-//        await Should.ThrowAsync<Exception>(() => sut.Handle(@event, CancellationToken.None));
+        // Act
+        await _sut.Consume(context);
 
-//        repo.Received().Add(Arg.Any<Notification>());
-//    }
-//}
+        // Assert
+        await _mediator.Received(1).Send(Arg.Any<CreateUserCommand>(), Arg.Any<CancellationToken>());
+        await _mediator.Received(1).Send(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>());
+    }
+}

@@ -1,72 +1,48 @@
-﻿//using FcgNotifications.Infrastructure.Database;
-//using FcgNotifications.Worker.Consumers;
-//using MassTransit;
-//using MediatR;
-//using Microsoft.Data.Sqlite;
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.Extensions.Logging;
-//using NSubstitute;
-//using Shouldly;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Worker.Consumers;
+using FgcGames.EventContracts.Events;
+using FgcGames.EventContracts.Enums;
+using MassTransit;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 
-//namespace FcgNotifications.UnitTests.Worker;
+namespace FcgNotifications.UnitTests.Worker;
 
-//public class PaymentProcessedConsumerTests : IDisposable
-//{
-//    private readonly IMediator _mediator;
-//    private readonly FcgNotificationsDbContext _dbContext;
-//    private readonly SqliteConnection _connection;
-//    private readonly ILogger<PaymentProcessedConsumer> _logger;
-//    private readonly PaymentProcessedConsumer _sut;
+public class PaymentProcessedConsumerTests
+{
+    private readonly IMediator _mediator = Substitute.For<IMediator>();
+    private readonly ILogger<PaymentProcessedConsumer> _logger = Substitute.For<ILogger<PaymentProcessedConsumer>>();
+    private readonly PaymentProcessedConsumer _sut;
 
-//    public PaymentProcessedConsumerTests()
-//    {
-//        _mediator = Substitute.For<IMediator>();
-//        _logger = Substitute.For<ILogger<PaymentProcessedConsumer>>();
+    public PaymentProcessedConsumerTests()
+    {
+        _sut = new PaymentProcessedConsumer(_mediator, _logger);
+    }
 
-//        _connection = new SqliteConnection("DataSource=:memory:");
-//        _connection.Open();
+    [Fact]
+    public async Task Dado_EventoDePagamentoAprovado_Quando_Consumir_Entao_DeveEnviarComandoAoMediator()
+    {
+        // Arrange
+        var context = Substitute.For<ConsumeContext<PaymentProcessedEvent>>();
 
-//        var options = new DbContextOptionsBuilder<FcgNotificationsDbContext>()
-//            .UseSqlite(_connection)
-//            .Options;
+        var @event = new PaymentProcessedEvent(
+            OrderId: Guid.NewGuid(),
+            UserId: Guid.NewGuid(),
+            GameId: Guid.NewGuid(),
+            Price: 100.0m,
+            Status: PaymentStatus.Approved,
+            ProcessedAtUtc: DateTime.UtcNow);
 
-//        _dbContext = new FcgNotificationsDbContext(options);
-//        _dbContext.Database.EnsureCreated();
+        context.Message.Returns(@event);
 
-//        _sut = new PaymentProcessedConsumer(_mediator, _dbContext, _logger);
-//    }
+        // Act
+        await _sut.Consume(context);
 
-//    [Fact]
-//    public async Task Dado_EventoPagamento_Quando_Consumir_Entao_SalvaNotificacaoComEmailDoCliente()
-//    {
-//        // Arrange
-//        var context = Substitute.For<ConsumeContext<PaymentProcessedEvent>>();
-//        var @event = new PaymentProcessedEvent(
-//            OrderId: Guid.NewGuid(),
-//            UserId: Guid.NewGuid(),
-//            CustomerEmail: "cliente@teste.com",
-//            CustomerName: "Cliente",
-//            TotalAmount: 100.00m,
-//            Status: "Approved");
-
-//        context.Message.Returns(@event);
-
-//        // Act
-//        await _sut.Consume(context);
-
-//        // Assert
-//        var notification = await _dbContext.Notifications.FirstOrDefaultAsync();
-//        notification.ShouldNotBeNull();
-//        notification.UserEmail.Address.ShouldBe(@event.CustomerEmail);
-
-//        // Correção: Use Arg.Any<CancellationToken>() para evitar erro de instâncias diferentes
-//        await _mediator.Received(1)
-//            .Publish(Arg.Any<PaymentProcessedEvent>(), Arg.Any<CancellationToken>());
-//    }
-
-//    public void Dispose()
-//    {
-//        _connection.Close();
-//        _connection.Dispose();
-//    }
-//}
+        // Assert
+        await _mediator.Received(1).Send(Arg.Is<ProcessPaymentResultCommand>(c =>
+            c.OrderId == @event.OrderId &&
+            c.UserId == @event.UserId &&
+            c.Status == PaymentStatus.Approved), Arg.Any<CancellationToken>());
+    }
+}

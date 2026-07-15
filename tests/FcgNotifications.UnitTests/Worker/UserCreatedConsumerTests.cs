@@ -1,65 +1,37 @@
-﻿//using FcgNotifications.Domain.Events;
-//using FcgNotifications.Infrastructure.Database;
-//using FcgNotifications.Worker.Consumers;
-//using MassTransit;
-//using MediatR;
-//using Microsoft.Data.Sqlite;
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.Extensions.Logging;
-//using NSubstitute;
-//using Shouldly;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Worker.Consumers;
+using FgcGames.EventContracts.Events;
+using MassTransit;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+namespace FcgNotifications.UnitTests.Worker;
 
-//namespace FcgNotifications.UnitTests.Worker;
+public class UserCreatedConsumerTests
+{
+    private readonly IMediator _mediator = Substitute.For<IMediator>();
+    private readonly ILogger<UserCreatedConsumer> _logger = Substitute.For<ILogger<UserCreatedConsumer>>();
+    private readonly UserCreatedConsumer _sut;
 
-//public class UserCreatedConsumerTests : IDisposable
-//{
-//    private readonly IMediator _mediator;
-//    private readonly FcgNotificationsDbContext _dbContext;
-//    private readonly SqliteConnection _connection;
-//    private readonly ILogger<UserCreatedConsumer> _logger;
-//    private readonly UserCreatedConsumer _sut;
+    public UserCreatedConsumerTests()
+    {
+        _sut = new UserCreatedConsumer(_mediator, _logger);
+    }
 
-//    public UserCreatedConsumerTests()
-//    {
-//        _mediator = Substitute.For<IMediator>();
-//        _logger = Substitute.For<ILogger<UserCreatedConsumer>>();
+    [Fact]
+    public async Task Dado_EventoDeUsuarioCriado_Quando_Consumir_Entao_DeveEnviarComandosAoMediator()
+    {
+        // Arrange
+        var context = Substitute.For<ConsumeContext<UserCreatedEvent>>();
 
-//        _connection = new SqliteConnection("DataSource=:memory:");
-//        _connection.Open();
+        var @event = new UserCreatedEvent(Guid.NewGuid(), "Camila", "camila@teste.com", DateTime.UtcNow);
+        context.Message.Returns(@event);
 
-//        var options = new DbContextOptionsBuilder<FcgNotificationsDbContext>()
-//            .UseSqlite(_connection)
-//            .Options;
+        // Act
+        await _sut.Consume(context);
 
-//        _dbContext = new FcgNotificationsDbContext(options);
-//        _dbContext.Database.EnsureCreated();
-
-//        _sut = new UserCreatedConsumer(_mediator, _dbContext, _logger);
-//    }
-
-//    [Fact]
-//    public async Task Dado_EventoValido_Quando_Consumir_Entao_SalvaNotificacaoEPublishMediatR()
-//    {
-//        // Arrange
-//        var context = Substitute.For<ConsumeContext<UserCreatedEvent>>();
-//        var @event = new UserCreatedEvent(Guid.NewGuid(), "Teste", "teste@teste.com", DateTime.UtcNow);
-//        context.Message.Returns(@event);
-
-//        // Act
-//        await _sut.Consume(context);
-
-//        // Assert
-//        var notification = await _dbContext.Notifications.FirstOrDefaultAsync();
-//        notification.ShouldNotBeNull();
-//        notification.UserEmail.Address.ShouldBe("teste@teste.com");
-
-//        await _mediator.Received(1)
-//            .Publish(Arg.Any<UserCreatedEvent>(), Arg.Any<CancellationToken>());
-//    }
-
-//    public void Dispose()
-//    {
-//        _connection.Close();
-//        _connection.Dispose();
-//    }
-//}
+        // Assert
+        await _mediator.Received(1).Send(Arg.Any<CreateUserCommand>(), Arg.Any<CancellationToken>());
+        await _mediator.Received(1).Send(Arg.Any<CreateNotificationCommand>(), Arg.Any<CancellationToken>());
+    }
+}

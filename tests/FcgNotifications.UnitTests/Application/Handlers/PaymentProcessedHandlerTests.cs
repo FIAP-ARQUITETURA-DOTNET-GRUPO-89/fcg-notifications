@@ -1,35 +1,50 @@
-﻿//using FcgNotifications.Application.Handlers;
-//using FcgNotifications.Domain.Entities;
-//using FcgNotifications.Domain.Events;
-//using FcgNotifications.Domain.Repositories;
-//using Microsoft.Extensions.Logging;
-//using NSubstitute;
+﻿using FcgNotifications.Application.Commands;
+using FcgNotifications.Application.Handlers;
+using FcgNotifications.Domain.Entities;
+using FcgNotifications.Domain.Repositories;
+using FcgUsers.Domain.ValueObjects;
+using FgcGames.EventContracts.Enums;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using Shouldly;
 
-//public class PaymentProcessedHandlerTests
-//{
-//    private readonly INotificationRepository _repository = Substitute.For<INotificationRepository>();
-//    private readonly PaymentProcessedHandler _sut;
+public class PaymentProcessedHandlerTests
+{
+    private readonly INotificationRepository _repository = Substitute.For<INotificationRepository>();
+    private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly PaymentProcessedHandler _sut;
 
-//    public PaymentProcessedHandlerTests() => _sut = new PaymentProcessedHandler(_repository, Substitute.For<ILogger<PaymentProcessedHandler>>());
+    public PaymentProcessedHandlerTests() =>
+        _sut = new PaymentProcessedHandler(_repository, _userRepository, Substitute.For<ILogger<PaymentProcessedHandler>>());
 
-//    [Fact]
-//    public async Task Dado_StatusNaoAprovado_Quando_Handle_Entao_NaoDevePersistir()
-//    {
-//        var @event = new PaymentProcessedEvent(Guid.NewGuid(), Guid.NewGuid(), "a@a.com", "Name", 10, "Rejected");
+    [Fact]
+    public async Task Dado_StatusNaoAprovado_Quando_Handle_Entao_DeveRetornarErro()
+    {
+        var command = new ProcessPaymentResultCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), PaymentStatus.Rejected);
 
-//        await _sut.Handle(@event, CancellationToken.None);
+        var result = await _sut.Handle(command, CancellationToken.None);
 
-//        _repository.DidNotReceive().Add(Arg.Any<Notification>());
-//    }
+        result.IsSuccess.ShouldBeFalse();
+        _repository.DidNotReceive().Add(Arg.Any<Notification>());
+    }
 
-//    [Fact]
-//    public async Task Dado_StatusAprovado_Quando_Handle_Entao_DeveSalvarESetarComoEnviado()
-//    {
-//        var @event = new PaymentProcessedEvent(Guid.NewGuid(), Guid.NewGuid(), "a@a.com", "Name", 10, "Approved");
+    [Fact]
+    public async Task Dado_StatusAprovadoUsuarioExistente_Quando_Handle_Entao_DeveSalvarESetarComoEnviado()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var command = new ProcessPaymentResultCommand(Guid.NewGuid(), userId, Guid.NewGuid(), PaymentStatus.Approved);
+        var user = new User(userId, "Name", Email.Create("a@a.com"));
 
-//        await _sut.Handle(@event, CancellationToken.None);
+        _userRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(user);
 
-//        _repository.Received(1).Add(Arg.Any<Notification>());
-//        await _repository.Received(2).SaveChangesAsync(); // Uma para Add, outra para MarkAsSent
-//    }
-//}
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        _repository.Received(1).Add(Arg.Any<Notification>());
+
+        await _repository.Received(2).SaveChangesAsync();
+    }
+}

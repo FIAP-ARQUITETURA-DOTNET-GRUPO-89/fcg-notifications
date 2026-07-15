@@ -18,11 +18,17 @@ public sealed class PaymentProcessedHandler(
     public async Task<Result<bool>> Handle(ProcessPaymentResultCommand command, CancellationToken cancellationToken)
     {
         if (command.Status != PaymentStatus.Approved)
+        {
+            logger.LogWarning("Tentativa de processar pagamento não aprovado para o pedido {OrderId}", command.OrderId);
             return Result.Error<bool>(new Exception("Pagamento não aprovado."));
+        }
 
         var user = await userRepository.GetByIdAsync(command.UserId);
         if (user == null)
+        {
+            logger.LogError("Falha ao processar notificação: Usuário {UserId} não encontrado.", command.UserId);
             return Result.Error<bool>(new Exception("Usuário não encontrado."));
+        }
 
         var entity = new Notification(
             command.UserId,
@@ -35,6 +41,8 @@ public sealed class PaymentProcessedHandler(
 
         entity.MarkAsSent();
         await repository.SaveChangesAsync();
+
+        logger.LogInformation("Notificação de pagamento aprovado enviada com sucesso para o usuário {UserId}.", command.UserId);
 
         return Result.Success(true);
     }

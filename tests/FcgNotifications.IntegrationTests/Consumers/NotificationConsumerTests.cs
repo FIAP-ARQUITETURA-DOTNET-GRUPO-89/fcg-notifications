@@ -1,92 +1,101 @@
-﻿//using Aspire.Hosting.Testing;
-//using FcgNotifications.Domain.Enums;
-//using FcgNotifications.Domain.Events;
-//using FcgNotifications.IntegrationTests.Fixtures;
-//using MassTransit;
-//using Microsoft.EntityFrameworkCore;
-//using Shouldly;
+﻿using Aspire.Hosting.Testing;
+using FcgNotifications.Domain.Entities;
+using FcgNotifications.Domain.Enums;
+using FcgNotifications.IntegrationTests.Fixtures;
+using FcgUsers.Domain.ValueObjects;
+using FgcGames.EventContracts.Enums;
+using FgcGames.EventContracts.Events;
+using MassTransit;
+using Microsoft.EntityFrameworkCore;
+using Shouldly;
 
-//namespace FcgNotifications.IntegrationTests.Tests;
+namespace FcgNotifications.IntegrationTests.Tests;
 
-//[Collection("IntegrationTests")]
-//public class NotificationConsumerTests(IntegrationTestFixture fixture)
-//{
-//    private readonly IntegrationTestFixture _fixture = fixture;
+[Collection("IntegrationTests")]
+public class NotificationConsumerTests(IntegrationTestFixture fixture) : IAsyncLifetime
+{
+    private readonly IntegrationTestFixture _fixture = fixture;
 
-//    [Fact]
-//    public async Task Deve_Criar_Notificacao_Ao_Consumir_UserCreatedEvent()
-//    {
-//        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
+    public async ValueTask InitializeAsync() => await _fixture.ResetDatabaseAsync();
+    public async ValueTask DisposeAsync() => await ValueTask.CompletedTask;
 
-//        var busControl = Bus.Factory.CreateUsingRabbitMq(cfg =>
-//        {
-//            cfg.Host(rabbitConnectionString);
-//        });
+    private async Task<Notification?> WaitForNotificationAsync(Guid userId, int timeoutMs = 8000)
+    {
+        var start = DateTime.UtcNow;
+        while ((DateTime.UtcNow - start).TotalMilliseconds < timeoutMs)
+        {
+            var notification = await _fixture.ExecuteDbContextAsync(async db =>
+                await db.Notifications.FirstOrDefaultAsync(n => n.UserId == userId));
 
-//        await busControl.StartAsync(TestContext.Current.CancellationToken);
+            if (notification != null)
+            {
+                return notification;
+            }
 
-//        await Task.Delay(5000, TestContext.Current.CancellationToken);
+            await Task.Delay(500);
+        }
+        return null;
+    }
 
-//        var userId = Guid.NewGuid();
-//        var email = "teste@fiap.com";
+    [Fact]
+    public async Task Deve_Criar_Notificacao_Ao_Consumir_UserCreatedEvent()
+    {
+        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
+        var busControl = Bus.Factory.CreateUsingRabbitMq(cfg => cfg.Host(rabbitConnectionString));
+        await busControl.StartAsync(TestContext.Current.CancellationToken);
 
-//        var message = new UserCreatedEvent(
-//            userId,
-//            "Teste",
-//            email,
-//            DateTime.UtcNow);
+        var userId = Guid.NewGuid();
+        var email = "teste@fiap.com";
+        var message = new UserCreatedEvent(userId, "Teste", email, DateTime.UtcNow);
 
-//        await busControl.Publish(message, TestContext.Current.CancellationToken);
+        await busControl.Publish(message, TestContext.Current.CancellationToken);
 
-//        await Task.Delay(4000, TestContext.Current.CancellationToken);
+        var notification = await WaitForNotificationAsync(userId);
 
-//        var notification = await _fixture.ExecuteDbContextAsync(async db =>
-//            await db.Notifications.FirstOrDefaultAsync(n => n.UserId == userId));
+        notification.ShouldNotBeNull();
+        notification.UserEmail.Address.ShouldBe(email);
+        notification.Type.ShouldBe(NotificationType.Welcome);
 
-//        notification.ShouldNotBeNull();
-//        notification.UserEmail.Address.ShouldBe(email);
-//        notification.Type.ShouldBe(NotificationType.Welcome);
+        await busControl.StopAsync(TestContext.Current.CancellationToken);
+    }
 
-//        await busControl.StopAsync(TestContext.Current.CancellationToken);
-//    }
+    [Fact]
+    public async Task Deve_Criar_Notificacao_Ao_Consumir_PaymentProcessedEvent_Aprovado()
+    {
+        // Arrange
+        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
+        var busControl = Bus.Factory.CreateUsingRabbitMq(cfg => cfg.Host(rabbitConnectionString));
+        await busControl.StartAsync(TestContext.Current.CancellationToken);
 
-//    [Fact]
-//    public async Task Deve_Criar_Notificacao_Ao_Consumir_PaymentProcessedEvent_Aprovado()
-//    {
-//        var rabbitConnectionString = await _fixture.App.GetConnectionStringAsync("rabbitmq", cancellationToken: TestContext.Current.CancellationToken);
+        var orderId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var customerEmail = "cliente@teste.com";
 
-//        var busControl = Bus.Factory.CreateUsingRabbitMq(cfg =>
-//        {
-//            cfg.Host(rabbitConnectionString);
-//        });
+        await _fixture.ExecuteDbContextAsync(async db => {
+            var user = new User(userId, "Cliente Teste", Email.Create(customerEmail));
+            db.Users.Add(user);
+            return await db.SaveChangesAsync();
+        });
 
-//        await busControl.StartAsync(TestContext.Current.CancellationToken);
+        var message = new PaymentProcessedEvent(
+            orderId,
+            userId,
+            Guid.NewGuid(),
+            100.00m,
+            PaymentStatus.Approved,
+            DateTime.UtcNow);
 
-//        var orderId = Guid.NewGuid();
-//        var userId = Guid.NewGuid();
-//        var customerEmail = "cliente@teste.com";
+        // Act
+        var endpoint = await busControl.GetSendEndpoint(new Uri("queue:notifications-payment-processed-events"));
+        await endpoint.Send(message, TestContext.Current.CancellationToken);
 
-//        var message = new PaymentProcessedEvent(
-//            orderId,
-//            userId,
-//            customerEmail,
-//            "Cliente Teste",
-//            100.00m,
-//            "Approved");
+        var notification = await WaitForNotificationAsync(userId);
 
-//        await busControl.Publish(message, TestContext.Current.CancellationToken);
+        // Assert
+        notification.ShouldNotBeNull("A notificação não foi criada. Verifique no Dashboard do Aspire os logs do worker.");
+        notification.UserEmail.Address.ShouldBe(customerEmail);
+        notification.Message.ShouldContain(orderId.ToString());
 
-//        await Task.Delay(4000, TestContext.Current.CancellationToken);
-
-//        var notification = await _fixture.ExecuteDbContextAsync(async db =>
-//            await db.Notifications.FirstOrDefaultAsync(n =>
-//                n.UserId == userId &&
-//                n.Type == NotificationType.PurchaseConfirmation));
-
-//        notification.ShouldNotBeNull();
-//        notification.UserEmail.Address.ShouldBe(customerEmail);
-//        notification.Message.ShouldContain(orderId.ToString());
-
-//        await busControl.StopAsync(TestContext.Current.CancellationToken);
-//    }
-//}
+        await busControl.StopAsync(TestContext.Current.CancellationToken);
+    }
+}
