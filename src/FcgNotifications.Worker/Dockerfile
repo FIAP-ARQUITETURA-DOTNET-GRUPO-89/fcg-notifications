@@ -37,6 +37,11 @@ RUN dotnet publish src/FcgNotifications.Worker/FcgNotifications.Worker.csproj \
 ########################################
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 
+RUN apt-get update && apt-get install -y \
+    libgssapi-krb5-2 \
+    krb5-locales \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 USER $APP_UID
