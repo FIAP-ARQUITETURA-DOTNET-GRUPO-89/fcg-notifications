@@ -36,7 +36,7 @@ spec:
       containers:
         - name: fcg-notifications-worker
 
-          image: jondamiao/fcg-notifications-worker:1.0.0-preview.6
+          image: jondamiao/fcg-notifications-worker:1.0.0
           imagePullPolicy: IfNotPresent
 
           envFrom:
